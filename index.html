@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dhurin Visitor Management</title>
+    <script src="https://unpkg.com/@webcam/webcam"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@paralleldrive/cuid2@2.2.2/dist/bundle.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .neubrutalism {
+            border: 3px solid black;
+            box-shadow: 5px 5px 0px black;
+            transition: all 0.2s ease;
+        }
+        .neubrutalism:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 7px 7px 0px black;
+        }
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: #a7d2e5;
+        }
+        #signature-pad {
+            border: 3px solid black;
+        }
+        .camera-feed {
+            border: 3px solid black;
+            width: 320px;
+            height: 240px;
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4">
+    <div id="auth-container" class="max-w-md mx-auto bg-white p-6 rounded-lg neubrutalism">
+        <h1 class="text-3xl font-bold mb-6">Dhurin Visitor Management</h1>
+        <div id="login-form">
+            <input type="email" id="login-email" placeholder="Email" class="w-full mb-3 p-2 neubrutalism">
+            <input type="password" id="login-password" placeholder="Password" class="w-full mb-3 p-2 neubrutalism">
+            <button onclick="login()" class="w-full bg-yellow-300 p-2 mb-3 neubrutalism">Login</button>
+            <button onclick="showCreateAccount()" class="w-full bg-green-300 p-2 neubrutalism">Create Account</button>
+        </div>
+        <div id="create-account-form" class="hidden">
+            <input type="email" id="create-email" placeholder="Email" class="w-full mb-3 p-2 neubrutalism">
+            <input type="password" id="create-password" placeholder="Password" class="w-full mb-3 p-2 neubrutalism">
+            <button onclick="createAccount()" class="w-full bg-green-300 p-2 mb-3 neubrutalism">Create Account</button>
+            <button onclick="showLogin()" class="w-full bg-yellow-300 p-2 neubrutalism">Back to Login</button>
+        </div>
+    </div>
+
+    <div id="visitor-form" class="hidden max-w-2xl mx-auto mt-8 bg-white p-6 rounded-lg neubrutalism">
+        <h2 class="text-2xl font-bold mb-6">New Visitor Registration</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="text" id="visitor-name" placeholder="Visitor Name" class="p-2 neubrutalism">
+            <input type="email" id="visitor-email" placeholder="Email" class="p-2 neubrutalism">
+            <input type="tel" id="visitor-phone" placeholder="Phone" class="p-2 neubrutalism">
+            <input type="text" id="visitor-address" placeholder="Address" class="p-2 neubrutalism">
+            <input type="text" id="meet-person" placeholder="Person to Meet" class="p-2 neubrutalism">
+            <input type="text" id="purpose" placeholder="Purpose of Visit" class="p-2 neubrutalism">
+            <input type="datetime-local" id="in-time" class="p-2 neubrutalism">
+            <input type="datetime-local" id="out-time" class="p-2 neubrutalism">
+        </div>
+        
+        <div class="mt-6">
+            <h3 class="font-bold mb-2">Signature:</h3>
+            <canvas id="signature-pad" class="w-full h-40 bg-white"></canvas>
+            <button onclick="clearSignature()" class="mt-2 bg-red-300 p-2 neubrutalism">Clear Signature</button>
+        </div>
+
+        <div class="mt-6">
+            <h3 class="font-bold mb-2">Photo:</h3>
+            <div id="camera" class="camera-feed bg-gray-100 mb-2"></div>
+            <button onclick="takePhoto()" class="bg-blue-300 p-2 neubrutalism">Take Photo</button>
+        </div>
+
+        <button onclick="submitVisitor()" class="w-full mt-6 bg-green-300 p-2 neubrutalism">Submit Visitor</button>
+    </div>
+
+    <script>
+        let signaturePad;
+        let currentUser = null;
+        let photoData = null;
+
+        // Initialize signature pad
+        window.onload = function() {
+            const canvas = document.getElementById('signature-pad');
+            signaturePad = new SignaturePad(canvas);
+        };
+
+        function clearSignature() {
+            signaturePad.clear();
+        }
+
+        function showCreateAccount() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('create-account-form').classList.remove('hidden');
+        }
+
+        function showLogin() {
+            document.getElementById('create-account-form').classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+        }
+
+        function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            // Simulate login (in real app, verify with backend)
+            if (email && password) {
+                currentUser = email;
+                document.getElementById('auth-container').classList.add('hidden');
+                document.getElementById('visitor-form').classList.remove('hidden');
+                initializeCamera();
+            }
+        }
+
+        function createAccount() {
+            const email = document.getElementById('create-email').value;
+            const password = document.getElementById('create-password').value;
+            // Simulate account creation (in real app, save to backend)
+            if (email && password) {
+                alert('Account created successfully!');
+                showLogin();
+            }
+        }
+
+        async function initializeCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.createElement('video');
+                video.srcObject = stream;
+                video.autoplay = true;
+                video.classList.add('camera-feed');
+                document.getElementById('camera').appendChild(video);
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+            }
+        }
+
+        function takePhoto() {
+            const video = document.querySelector('video');
+            const canvas = document.createElement('canvas');
+            canvas.width = 320;
+            canvas.height = 240;
+            canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+            photoData = canvas.toDataURL('image/jpeg');
+            alert('Photo captured!');
+        }
+
+        function submitVisitor() {
+            const visitorData = {
+                name: document.getElementById('visitor-name').value,
+                email: document.getElementById('visitor-email').value,
+                phone: document.getElementById('visitor-phone').value,
+                address: document.getElementById('visitor-address').value,
+                meetPerson: document.getElementById('meet-person').value,
+                purpose: document.getElementById('purpose').value,
+                inTime: document.getElementById('in-time').value,
+                outTime: document.getElementById('out-time').value,
+                signature: signaturePad.toDataURL(),
+                photo: photoData,
+                id: createId()
+            };
+
+            // In real app, send to backend and trigger email approval
+            console.log('Visitor data:', visitorData);
+            alert('Visitor registration submitted for approval!');
+            
+            // Reset form
+            document.getElementById('visitor-form').reset();
+            signaturePad.clear();
+        }
+
+        function createId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
